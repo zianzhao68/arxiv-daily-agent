@@ -126,7 +126,7 @@ concurrency:
 pdf:
   download_enabled: true
   storage_dir: "data/pdfs"
-  engine: "pdf-text"  # native | pdf-text | mistral-ocr
+  engine: "native"  # native | pdf-text | mistral-ocr (auto-selected by file size)
 
 hjfy:
   enabled: false
