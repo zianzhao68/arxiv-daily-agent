@@ -1,0 +1,52 @@
+{
+  "_meta": {
+    "description": "Institution tier whitelist for paper scoring.",
+    "last_updated": "2026-03-23",
+    "update_policy": "Manual. Add institutions as they appear in papers."
+  },
+  "tier1": {
+    "description": "Top-5 global AI labs with dominant research output",
+    "institutions": [
+      "Google DeepMind",
+      "OpenAI",
+      "Meta FAIR",
+      "Anthropic",
+      "NVIDIA Research",
+      "Google Research",
+      "Microsoft Research"
+    ]
+  },
+  "tier2": {
+    "description": "Top universities and major tech research divisions",
+    "institutions": [
+      "Stanford University",
+      "MIT",
+      "Carnegie Mellon University",
+      "UC Berkeley",
+      "Tsinghua University",
+      "Peking University",
+      "Shanghai Jiao Tong University",
+      "ETH Zurich",
+      "University of Oxford",
+      "University of Cambridge",
+      "Toyota Research Institute",
+      "Amazon Science",
+      "Apple ML Research",
+      "Huawei Noah's Ark Lab",
+      "ByteDance Research",
+      "Tencent AI Lab",
+      "Baidu Research",
+      "Shanghai AI Laboratory",
+      "Beijing Academy of Artificial Intelligence"
+    ]
+  },
+  "tier3_keywords": {
+    "description": "Partial-match keywords for Tier 3 identification.",
+    "keywords": [
+      "University",
+      "Institute of Technology",
+      "Research Institute",
+      "National Lab"
+    ]
+  }
+}

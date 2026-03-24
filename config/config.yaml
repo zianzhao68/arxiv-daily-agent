@@ -1,0 +1,135 @@
+arxiv:
+  rss_categories: "cs.CV+cs.RO+cs.AI+cs.LG+cs.MA"
+  api_max_results_per_direction: 50
+  api_delay_seconds: 3
+  staleness_threshold_hours: 24
+
+research_directions:
+  embodied_ai:
+    title_keywords:
+      - "embodied AI"
+      - "embodied agent"
+      - "embodied intelligence"
+      - "robot learning"
+      - "robotic manipulation"
+      - "humanoid robot"
+      - "dexterous grasping"
+      - "dexterous manipulation"
+      - "dexterous hand"
+      - "VLA"
+      - "vision-language-action"
+    abstract_keywords:
+      - "embodied manipulation"
+      - "embodied navigation"
+      - "sim-to-real"
+      - "tactile sensing"
+      - "interactive perception"
+      - "vision-language-action"
+      - "dexterous manipulation"
+    abstract_combos:
+      - ["robot", "policy learning"]
+      - ["manipulation", "foundation model"]
+      - ["robot", "reinforcement learning"]
+      - ["embodied", "large language model"]
+      - ["humanoid", "locomotion"]
+      - ["VLA", "robot"]
+      - ["VLA", "manipulation"]
+    categories:
+      - "cs.RO"
+      - "cs.AI"
+      - "cs.CV"
+      - "cs.LG"
+
+  world_models:
+    title_keywords:
+      - "world model"
+      - "world simulator"
+      - "video generation model"
+      - "neural simulator"
+      - "world action model"
+    abstract_keywords:
+      - "world model"
+      - "video prediction"
+      - "learned dynamics"
+      - "physics simulation"
+      - "4D generation"
+      - "world action model"
+    abstract_combos:
+      - ["dynamics model", "reinforcement learning"]
+      - ["video generation", "physical simulation"]
+      - ["generative model", "environment simulation"]
+      - ["diffusion", "world simulator"]
+    categories:
+      - "cs.CV"
+      - "cs.AI"
+      - "cs.LG"
+      - "cs.GR"
+
+  autonomous_driving:
+    title_keywords:
+      - "autonomous driving"
+      - "self-driving"
+      - "end-to-end driving"
+      - "autonomous vehicle"
+      - "motion planning"
+    abstract_keywords:
+      - "autonomous vehicle"
+      - "bird-eye view"
+      - "BEV perception"
+      - "occupancy prediction"
+      - "occupancy network"
+      - "lane detection"
+      - "trajectory prediction"
+      - "V2X"
+    abstract_combos:
+      - ["motion planning", "driving"]
+      - ["trajectory prediction", "vehicle"]
+      - ["LiDAR", "camera fusion", "driving"]
+      - ["end-to-end", "planning", "driving"]
+    categories:
+      - "cs.CV"
+      - "cs.RO"
+      - "cs.AI"
+
+models:
+  relevance_filter:
+    provider: "openrouter"
+    model_id: "google/gemini-2.5-flash"
+    temperature: 0.1
+    batch_size: 10
+
+  deep_analysis:
+    provider: "openrouter"
+    model_id: "google/gemini-3.1-pro-preview"
+    temperature: 0.2
+    batch_size: 1
+
+scoring:
+  weights:
+    novelty: 0.25
+    impact: 0.30
+    reproducibility: 0.15
+    affiliation: 0.15
+    direction_match: 0.15
+  hot_threshold: 4.0
+
+email:
+  smtp_server: "smtp.qq.com"
+  smtp_port: 465
+  use_ssl: true
+  max_highlights_in_email: 3
+
+concurrency:
+  max_concurrent_llm: 10
+  max_concurrent_pdf: 5
+
+pdf:
+  download_enabled: true
+  storage_dir: "data/pdfs"
+  engine: "pdf-text"  # native | pdf-text | mistral-ocr
+
+hjfy:
+  enabled: false
+  base_url: "https://hjfy.top"
+  link_template: "https://hjfy.top/arxiv/{arxiv_id}"
+  download_pdfs: false

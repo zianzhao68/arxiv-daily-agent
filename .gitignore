@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.env
+.venv/
+venv/
+*.bak
+.pytest_cache/
+
+# Runtime data (managed separately or via data submodule)
+data/pdfs/
+data/reports/
+data/weekly/
+data/papers_index.json
+data/papers_index.json.bak
+
+# Test scripts
+_test_*.py
+test_fetch_only.py
