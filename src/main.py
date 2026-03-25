@@ -99,11 +99,13 @@ async def run_pipeline() -> None:
     # PDF download (concurrent, for local archival) — core papers only
     pdf_config = config.get("pdf", {})
     if pdf_config.get("download_enabled", False):
-        pdf_dir = Path(pdf_config.get("storage_dir", "data/pdfs"))
-        if not pdf_dir.is_absolute():
-            pdf_dir = DATA_DIR / pdf_dir.name
+        pdf_base = Path(pdf_config.get("storage_dir", "data/pdfs"))
+        if not pdf_base.is_absolute():
+            pdf_base = DATA_DIR / pdf_base.name
+        pdf_dir = pdf_base / date_str
         logger.info("=== Downloading PDFs to %s ===", pdf_dir)
         await download_all_pdfs(core_papers, pdf_dir)
+        pdf_config = {**pdf_config, "storage_dir": str(pdf_dir)}
 
     # Stage 5b: DeepResearch — CORE papers only (with full PDF)
     skip_deep_research = os.environ.get("SKIP_DEEP_RESEARCH", "").strip().lower() in ("1", "true", "yes")
