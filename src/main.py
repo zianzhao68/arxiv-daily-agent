@@ -50,7 +50,7 @@ async def run_pipeline() -> None:
 
     config = load_config()
     api_key = get_env("OPENROUTER_API_KEY")
-    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    date_str = os.environ.get("REPORT_DATE", "").strip() or datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     index_path = DATA_DIR / "papers_index.json"
     index = load_index(index_path)
