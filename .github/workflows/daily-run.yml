@@ -48,6 +48,7 @@ jobs:
           cd ..
           git config user.name "arxiv-agent[bot]"
           git config user.email "bot@users.noreply.github.com"
+          git pull --rebase origin main
           git add data
           git diff --cached --quiet || git commit -m "update data submodule pointer"
           git push
