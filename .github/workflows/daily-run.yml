@@ -34,8 +34,11 @@ jobs:
         run: python -m src.main
 
       - name: Commit and push data submodule
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           cd data
+          git remote set-url origin "https://x-access-token:${PAT_TOKEN}@github.com/Yuuuuuuuuhvt/embodied-daily-papers.git"
           git checkout main
           git config user.name "arxiv-agent[bot]"
           git config user.email "bot@users.noreply.github.com"
