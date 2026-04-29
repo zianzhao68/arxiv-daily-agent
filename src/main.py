@@ -15,6 +15,7 @@ from .deep_research import generate_deep_research
 from .email_sender import send_digest
 from .fetcher import hybrid_fetch
 from .pdf_downloader import download_all_pdfs
+from .paper_text import extract_all_paper_texts
 from .git_ops import commit_and_push_data
 from .models import ArxivPaper, AnalysisResult, paper_to_index_entry
 from .relevance_filter import filter_relevance
@@ -81,6 +82,25 @@ async def run_pipeline() -> None:
         logger.info("No relevant papers after filtering. Exiting.")
         return
 
+    # PDF download (concurrent) — for ALL relevant so deep_analysis can use full text
+    pdf_config = config.get("pdf", {})
+    pdf_paths: dict[str, Path] = {}
+    if pdf_config.get("download_enabled", False):
+        pdf_base = Path(pdf_config.get("storage_dir", "data/pdfs"))
+        if not pdf_base.is_absolute():
+            pdf_base = DATA_DIR / pdf_base.name
+        pdf_dir = pdf_base / date_str
+        logger.info("=== Downloading PDFs to %s ===", pdf_dir)
+        pdf_paths = await download_all_pdfs(all_relevant, pdf_dir)
+        pdf_config = {**pdf_config, "storage_dir": str(pdf_dir)}
+
+    # Stage 4b: Extract full paper text (TeX → PDF → abstract fallback)
+    logger.info("=== Stage 4b: Extract full paper text ===")
+    pdf_concurrency_cfg = config.get("concurrency", {}).get("max_concurrent_pdf", 5)
+    paper_texts = await extract_all_paper_texts(
+        all_relevant, pdf_paths, max_concurrent=pdf_concurrency_cfg
+    )
+
     # Stage 5: Deep analysis for ALL relevant papers (core + peripheral)
     logger.info("=== Stage 5: Deep analysis (%d core + %d peripheral, concurrent) ===",
                 len(core_papers), len(peripheral_papers))
@@ -89,23 +109,15 @@ async def run_pipeline() -> None:
     async def _analyze_one(paper: ArxivPaper) -> tuple[str, AnalysisResult]:
         async with sem:
             logger.info("[deep_analysis] start %s", paper.arxiv_id)
-            a = await analyze_paper(paper, config["models"]["deep_analysis"], config["scoring"], api_key)
+            a = await analyze_paper(
+                paper, config["models"]["deep_analysis"], config["scoring"], api_key,
+                paper_text=paper_texts.get(paper.arxiv_id),
+            )
             logger.info("[deep_analysis] done  %s score=%.2f", paper.arxiv_id, a.weighted_score)
             return paper.arxiv_id, a
 
     analysis_results = await asyncio.gather(*[_analyze_one(p) for p in all_relevant])
     analyses: dict[str, AnalysisResult] = dict(analysis_results)
-
-    # PDF download (concurrent, for local archival) — core papers only
-    pdf_config = config.get("pdf", {})
-    if pdf_config.get("download_enabled", False):
-        pdf_base = Path(pdf_config.get("storage_dir", "data/pdfs"))
-        if not pdf_base.is_absolute():
-            pdf_base = DATA_DIR / pdf_base.name
-        pdf_dir = pdf_base / date_str
-        logger.info("=== Downloading PDFs to %s ===", pdf_dir)
-        await download_all_pdfs(core_papers, pdf_dir)
-        pdf_config = {**pdf_config, "storage_dir": str(pdf_dir)}
 
     # Stage 5b: DeepResearch — CORE papers only (with full PDF)
     skip_deep_research = os.environ.get("SKIP_DEEP_RESEARCH", "").strip().lower() in ("1", "true", "yes")
@@ -122,7 +134,7 @@ async def run_pipeline() -> None:
                 logger.info("[deep_research] start %s", paper.arxiv_id)
                 dr = await generate_deep_research(
                     paper, config["models"]["deep_analysis"], api_key,
-                    pdf_config=pdf_config if pdf_config.get("download_enabled") else None,
+                    paper_text=paper_texts.get(paper.arxiv_id),
                 )
                 logger.info("[deep_research] done  %s (%d chars)", paper.arxiv_id, len(dr))
                 return paper.arxiv_id, dr

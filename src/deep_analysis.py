@@ -83,6 +83,7 @@ async def analyze_paper(
     model_config: dict,
     scoring_config: dict,
     api_key: str,
+    paper_text: tuple[str, str] | None = None,
 ) -> AnalysisResult:
     system_prompt = load_prompt("deep_analysis.txt")
     affiliations = load_affiliations()
@@ -107,6 +108,15 @@ async def analyze_paper(
             f"{focus_desc}\n\n"
             f"Score `focus_relevance_score` based on how closely this paper "
             f"aligns with the reader's focus described above.\n\n"
+        )
+    if paper_text and paper_text[1] != "abstract":
+        text, source = paper_text
+        user_msg += (
+            f"## Full Paper Text (source={source})\n"
+            f"Use this full text to ground your analysis in concrete details "
+            f"(method, results, ablations). The abstract above is a summary; "
+            f"this section is the actual paper content.\n\n"
+            f"{text}\n\n"
         )
     user_msg += "Produce the analysis JSON."
 
