@@ -94,13 +94,13 @@ research_directions:
 models:
   relevance_filter:
     provider: "openrouter"
-    model_id: "google/gemini-2.5-flash"
+    model_id: "ts-pri-kimi-26-fast"
     temperature: 0.1
     batch_size: 10
 
   deep_analysis:
     provider: "openrouter"
-    model_id: "google/gemini-3.1-pro-preview"
+    model_id: "ts-pri-kimi-26"
     temperature: 0.2
     batch_size: 1
 

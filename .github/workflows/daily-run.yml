@@ -32,7 +32,7 @@ jobs:
 
           git -C data config user.name "arxiv-agent[bot]"
           git -C data config user.email "bot@users.noreply.github.com"
-          git -C data remote set-url origin "https://x-access-token:${PAT_TOKEN}@github.com/Yuuuuuuuuhvt/embodied-daily-papers.git"
+          git -C data remote set-url origin "https://x-access-token:${PAT_TOKEN}@github.com/zianzhao68/arxiv-daily-data.git"
           git -C data fetch origin main
           git -C data checkout -B main origin/main
 
@@ -58,7 +58,7 @@ jobs:
           git config user.name "arxiv-agent[bot]"
           git config user.email "bot@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git"
-          git -C data remote set-url origin "https://x-access-token:${PAT_TOKEN}@github.com/Yuuuuuuuuhvt/embodied-daily-papers.git"
+          git -C data remote set-url origin "https://x-access-token:${PAT_TOKEN}@github.com/zianzhao68/arxiv-daily-data.git"
 
           git -C data add -A
           if ! git -C data diff --cached --quiet; then

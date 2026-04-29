@@ -7,7 +7,7 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-OPENROUTER_BASE = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_BASE = "https://llm.thundersoft.com/v1/chat/completions"
 
 MAX_RETRIES = 3
 BACKOFF_SECONDS = [2, 4, 8]
