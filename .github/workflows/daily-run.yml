@@ -2,7 +2,7 @@ name: Daily Papers Agent
 
 on:
   schedule:
-    - cron: '30 5 * * 1-5'
+    - cron: '27 5 * * 1-5'
   workflow_dispatch:
 
 permissions:
