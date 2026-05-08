@@ -288,6 +288,7 @@ async def generate_rich_reading_for_paper(
         model_config=model_config,
         api_key=api_key,
     )
+    note = _normalize_github_markdown(note)
     note = _sanitize_note_markdown(note, output_dir)
     note = _ensure_selected_figures_present(note, selected)
     readme_path = output_dir / "README.md"
@@ -782,6 +783,69 @@ def _sanitize_note_markdown(note: str, output_dir: Path) -> str:
         if ".temp_images" not in line and "/tmp/" not in line and "\\tmp\\" not in line
     ]
     return "\n".join(lines).strip() + "\n"
+
+
+def _normalize_github_markdown(note: str) -> str:
+    text = note.replace("\r\n", "\n").replace("\r", "\n")
+    text = _normalize_heading_spacing(text)
+    text = _normalize_math_macros(text)
+    text = _convert_dollar_math_blocks_to_fenced(text)
+    return text
+
+
+def _normalize_heading_spacing(text: str) -> str:
+    text = re.sub(r"(?<!\n)(#{1,6}\s+)", r"\n\n\1", text)
+    text = re.sub(r"(?m)^(#{1,6}\s+.+)\n(?!\n)", r"\1\n\n", text)
+    return text
+
+
+def _normalize_math_macros(text: str) -> str:
+    text = re.sub(r"\\textsc\{([^{}]+)\}", r"\\mathrm{\1}", text)
+    text = text.replace(r"\big\Vert", r"\Vert")
+    return text
+
+
+def _convert_dollar_math_blocks_to_fenced(text: str) -> str:
+    text = re.sub(
+        r"\$\$\s*([^$\n]+?)\s*\$\$",
+        lambda match: f"\n\n```math\n{match.group(1).strip()}\n```\n\n",
+        text,
+    )
+    lines = text.splitlines()
+    out: list[str] = []
+    in_math = False
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == "$$":
+            if in_math:
+                out.append("```")
+                out.append("")
+                in_math = False
+            else:
+                if out and out[-1].strip():
+                    out.append("")
+                out.append("```math")
+                in_math = True
+            continue
+
+        single_line = re.fullmatch(r"\s*\$\$\s*(.+?)\s*\$\$\s*", line)
+        if single_line and not in_math:
+            if out and out[-1].strip():
+                out.append("")
+            out.append("```math")
+            out.append(single_line.group(1))
+            out.append("```")
+            out.append("")
+            continue
+
+        out.append(line)
+
+    if in_math:
+        out.append("```")
+        out.append("")
+
+    return "\n".join(out).strip() + "\n"
 
 
 def _ensure_selected_figures_present(note: str, selected_figures: list[SelectedFigure]) -> str:

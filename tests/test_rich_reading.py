@@ -97,6 +97,35 @@ def test_filter_candidates_skips_small_files(tmp_path):
     assert [candidate.filename for candidate in filtered] == ["large.png"]
 
 
+def test_normalize_github_markdown_converts_math_blocks():
+    note = (
+        "# Title ## 方法与公式\n"
+        "正文\n"
+        "$$\n"
+        "\\mathcal{L}=\\left\\|x\\right\\|_2^2\n"
+        "\\tag{1}\n"
+        "$$\n"
+        "其中 $t$ 是时间。"
+    )
+
+    normalized = rr._normalize_github_markdown(note)
+
+    assert "$$" not in normalized
+    assert "```math\n\\mathcal{L}=\\left\\|x\\right\\|_2^2\n\\tag{1}\n```" in normalized
+    assert "# Title \n\n## 方法与公式" in normalized
+
+
+def test_normalize_github_markdown_rewrites_fragile_math_macros():
+    note = "$$\\mathbf{H}_{\\textsc{act\\_q}} + a\\big\\Vert b$$"
+
+    normalized = rr._normalize_github_markdown(note)
+
+    assert "\\textsc" not in normalized
+    assert "\\mathrm{act\\_q}" in normalized
+    assert "\\big\\Vert" not in normalized
+    assert normalized.startswith("```math")
+
+
 def test_report_contains_rich_reading_link():
     paper = _make_paper("2601.00001")
     analysis = AnalysisResult(

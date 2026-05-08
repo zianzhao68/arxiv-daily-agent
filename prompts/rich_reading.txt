@@ -10,6 +10,30 @@
 6. 内容要融合旧版 DeepResearch，但不能照搬；需要补上公式解释、图表解读、实验消融和客观局限。
 7. 完全使用中文写作，技术术语可保留英文。
 
+GitHub Markdown 数学公式渲染硬性规则：
+
+1. 标题、列表、图片、正文段落、公式块必须各自独立成行；标题前后必须有空行，禁止把 `#` / `##` 标题和正文写在同一行。
+2. 行内公式只用于短表达式，例如 `$t$`、`$\mathbf{x}_t$`、`$\lambda_w=0.5$`。行内公式中禁止出现 `\begin{...}`、`\tag{...}`、换行、长损失函数或多项对齐。
+3. 所有长公式、多行公式、带编号公式必须使用 GitHub 官方推荐的 fenced math block，禁止使用 `$$...$$`：
+
+````markdown
+```math
+\mathcal{L}_\mathrm{act}
+= \mathbb{E}_{\tau,\boldsymbol{\epsilon}}
+\left\lVert
+\mathbf{v}_\xi(\mathbf{A}_t^\tau,\tau,\mathbf{H}_\mathrm{ACT})
+-
+(\mathbf{A}_t-\boldsymbol{\epsilon})
+\right\rVert_2^2
+\tag{1}
+```
+````
+
+4. 如果需要公式编号，`\tag{...}` 必须放在同一个 `math` 代码块内部的最后一行附近，禁止把 `\tag{...}` 放到普通正文行。
+5. 避免 GitHub MathJax 容易不兼容的宏：不要使用 `\textsc{...}`，改用 `\mathrm{...}` 或 `\operatorname{...}`；范数使用 `\left\lVert ... \right\rVert`；拼接符用 `\Vert` 或 `\mid`，不要写成复杂的 delimiter hack。
+6. 如果原文公式太复杂，优先拆成多个较短的 `math` 代码块，并在公式后用中文解释变量含义；不要输出无法确定能渲染的 LaTeX。
+7. 输出结束前自检：全文不得出现 `$$`；不得出现同一行内同时包含标题和正文；所有 `\begin` / `\tag` 必须只出现在 `math` fenced block 内。
+
 固定结构如下：
 
 # <论文标题>
