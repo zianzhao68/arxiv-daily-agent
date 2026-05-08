@@ -104,6 +104,12 @@ models:
     temperature: 0.2
     batch_size: 1
 
+  figure_analysis:
+    provider: "openrouter"
+    model_id: "ts-pri-kimi-26"
+    temperature: 0.1
+    batch_size: 1
+
 research_focus:
   description: |
     Our current research focus is on World Models assisting Embodied AI
@@ -161,6 +167,17 @@ pdf:
   download_enabled: true
   storage_dir: "data/pdfs"
   engine: "native"  # native | pdf-text | mistral-ocr (auto-selected by file size)
+
+rich_reading:
+  enabled: true
+  scope: "core_and_hot"  # core_and_hot | core_only | all_relevant
+  max_papers_per_day: 5
+  max_candidate_figures: 12
+  max_selected_figures: 4
+  storage_dir: "data/rich_readings"
+  keep_pdfs: false
+  min_figure_kb: 8
+  max_vision_image_mb: 3
 
 hjfy:
   enabled: false

@@ -11,6 +11,9 @@ python -m src.main
 # Skip the expensive DeepResearch stage
 SKIP_DEEP_RESEARCH=1 python -m src.main
 
+# Skip standalone figure-rich notes
+SKIP_RICH_READING=1 python -m src.main
+
 # Override report date (default: today)
 REPORT_DATE=2026-03-28 python -m src.main
 
@@ -26,7 +29,7 @@ Fully automated arXiv paper discovery pipeline for three research directions: Em
 
 ```
 Fetch (API+RSS) → Dedup → Relevance Filter → Deep Analysis → PDF Download
-  → DeepResearch (core papers only) → Report → Email → Git Push
+  → DeepResearch (core papers only) → RichReading (core + hot) → Report → Email → Git Push
 ```
 
 **Key design decisions:**
@@ -34,6 +37,7 @@ Fetch (API+RSS) → Dedup → Relevance Filter → Deep Analysis → PDF Downloa
 - **Hybrid fetch**: arXiv API (keyword search) + RSS feeds (announce type metadata) combined for both precision and recency
 - **3-tier relevance**: LLM classifies papers as `core` / `peripheral` / `not_relevant`. Only core papers get DeepResearch (expensive). Both core and peripheral get Deep Analysis
 - **PDF via base64**: PDFs are downloaded locally and base64-encoded before sending to OpenRouter, avoiding server-side URL fetch failures (502s). Files >15MB degrade from `native` to `pdf-text` engine
+- **RichReading**: Core papers plus hot peripheral papers get standalone figure-rich notes in `data/rich_readings/YYYY-MM-DD/<arxiv_id>/README.md`; only selected figures are retained
 - **Concurrency**: `asyncio.Semaphore` limits parallel LLM calls (`max_concurrent_llm=10`) and PDF processing (`max_concurrent_pdf=5`)
 - **Fail-safe**: Every LLM stage has fallback defaults — parse failures default to `peripheral`, analysis failures use safe defaults, DeepResearch falls back from PDF to text-only
 

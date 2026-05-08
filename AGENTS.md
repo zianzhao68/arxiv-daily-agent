@@ -15,13 +15,14 @@
 ```text
 Pipeline stages (sequential):
   Fetch -> Dedup -> Relevance Filter -> Deep Analysis -> PDF Download
-    -> DeepResearch -> Report -> Email -> Git Push
+    -> DeepResearch -> RichReading -> Report -> Email -> Git Push
 
 Data flow:
   arXiv API/RSS -> list[ArxivPaper] -> dedup against papers_index.json
     -> LLM batch classify (core / peripheral / not_relevant)
     -> LLM per-paper analysis (scores, tags, summary)
     -> Download PDFs -> LLM per-paper scholarly analysis (with PDF)
+    -> Generate standalone figure-rich notes for core + hot papers
     -> Jinja2 render report -> save to data/reports/YYYY-MM-DD.md
 ```
 
@@ -48,6 +49,7 @@ src/                        # Python package, run via: python -m src.main
   relevance_filter.py       # Batch LLM classification with few-shot examples
   deep_analysis.py          # Per-paper structured analysis (scores, tags, affiliations)
   deep_research.py          # Per-paper 3-module scholarly analysis (with PDF support)
+  rich_reading.py           # Figure extraction, visual figure selection, standalone rich notes
   pdf_downloader.py         # Async PDF download from arXiv
   report_generator.py       # Jinja2 report + email HTML rendering
   email_sender.py           # QQ Mail SMTP_SSL sender
@@ -59,6 +61,8 @@ prompts/
   relevance_filter.txt      # System prompt for classification
   deep_analysis.txt         # System prompt for structured analysis
   deep_research.txt         # System prompt for scholarly deep-dive (Chinese output)
+  figure_selection.txt      # System prompt for visual figure selection
+  rich_reading.txt          # System prompt for standalone figure-rich notes
 templates/
   daily_report.md.j2        # Markdown report template
   email_digest.html.j2      # Email HTML template
@@ -66,7 +70,8 @@ tests/                      # pytest unit tests
 data/                       # Runtime data (gitignored, or git submodule)
   papers_index.json         # Cumulative paper index (dedup source)
   reports/                  # Generated daily reports
-  pdfs/                     # Downloaded PDFs (local cache)
+  rich_readings/             # Standalone figure-rich notes + selected figures
+  pdfs/                     # Legacy/downloaded PDFs when rich_reading.keep_pdfs=true
 .github/workflows/
   daily-run.yml             # GitHub Actions: cron + manual trigger
 ```
@@ -94,7 +99,7 @@ data/                       # Runtime data (gitignored, or git submodule)
 
 - **All tunable parameters live in `config/config.yaml`** — never hardcode model IDs, thresholds, batch sizes, or keyword lists in source code.
 - **Prompts are plain text files** in `prompts/` — loaded at runtime via `config.load_prompt()`. Edit prompts to adjust LLM behavior without touching code.
-- **Environment variables**: `OPENROUTER_API_KEY` (required), `QQ_MAIL_ADDRESS` + `QQ_MAIL_AUTH_CODE` (optional), `SKIP_DEEP_RESEARCH` (optional flag).
+- **Environment variables**: `OPENROUTER_API_KEY` (required), `QQ_MAIL_ADDRESS` + `QQ_MAIL_AUTH_CODE` (optional), `SKIP_DEEP_RESEARCH` and `SKIP_RICH_READING` (optional flags).
 
 ### Templates
 

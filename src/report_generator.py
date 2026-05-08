@@ -24,6 +24,7 @@ def _paper_view(
     analysis: AnalysisResult,
     hjfy_template: str,
     deep_research: str = "",
+    rich_reading_link: str = "",
 ) -> dict:
     return {
         "arxiv_id": paper.arxiv_id,
@@ -45,6 +46,7 @@ def _paper_view(
         "affiliation_tier": analysis.affiliation_tier,
         "key_terms_str": ", ".join(analysis.key_terms),
         "deep_research": deep_research,
+        "rich_reading_link": rich_reading_link,
     }
 
 
@@ -55,6 +57,7 @@ def generate_daily_report(
     analyses: dict[str, AnalysisResult],
     deep_research_reports: dict[str, str],
     config: dict,
+    rich_reading_links: dict[str, str] | None = None,
 ) -> str:
     env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)), autoescape=False)
     template = env.get_template("daily_report.md.j2")
@@ -63,16 +66,19 @@ def generate_daily_report(
     hot_threshold = config.get("scoring", {}).get("hot_threshold", 4.0)
 
     core_views = []
+    rich_reading_links = rich_reading_links or {}
     for paper in core_papers:
         a = analyses.get(paper.arxiv_id, AnalysisResult())
         dr = deep_research_reports.get(paper.arxiv_id, "")
-        core_views.append(_paper_view(paper, a, hjfy_template, dr))
+        rr = rich_reading_links.get(paper.arxiv_id, "")
+        core_views.append(_paper_view(paper, a, hjfy_template, dr, rr))
     core_views.sort(key=lambda v: v["weighted_score"], reverse=True)
 
     peripheral_views = []
     for paper in peripheral_papers:
         a = analyses.get(paper.arxiv_id, AnalysisResult())
-        peripheral_views.append(_paper_view(paper, a, hjfy_template))
+        rr = rich_reading_links.get(paper.arxiv_id, "")
+        peripheral_views.append(_paper_view(paper, a, hjfy_template, rich_reading_link=rr))
     peripheral_views.sort(key=lambda v: v["weighted_score"], reverse=True)
 
     highlights = [v for v in core_views if v["weighted_score"] >= hot_threshold]

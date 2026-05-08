@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,6 +25,7 @@ from .report_generator import (
     generate_email_html,
     save_report,
 )
+from .rich_reading import generate_rich_readings
 
 
 class JSONFormatter(logging.Formatter):
@@ -86,10 +88,14 @@ async def run_pipeline() -> None:
     pdf_config = config.get("pdf", {})
     pdf_paths: dict[str, Path] = {}
     if pdf_config.get("download_enabled", False):
-        pdf_base = Path(pdf_config.get("storage_dir", "data/pdfs"))
-        if not pdf_base.is_absolute():
-            pdf_base = DATA_DIR / pdf_base.name
-        pdf_dir = pdf_base / date_str
+        keep_pdfs = config.get("rich_reading", {}).get("keep_pdfs", True)
+        if keep_pdfs:
+            pdf_base = Path(pdf_config.get("storage_dir", "data/pdfs"))
+            if not pdf_base.is_absolute():
+                pdf_base = DATA_DIR / pdf_base.name
+            pdf_dir = pdf_base / date_str
+        else:
+            pdf_dir = Path(tempfile.mkdtemp(prefix=f"arxiv-pdfs-{date_str}-"))
         logger.info("=== Downloading PDFs to %s ===", pdf_dir)
         pdf_paths = await download_all_pdfs(all_relevant, pdf_dir)
         pdf_config = {**pdf_config, "storage_dir": str(pdf_dir)}
@@ -144,6 +150,28 @@ async def run_pipeline() -> None:
     else:
         logger.info("=== Stage 5b: DeepResearch skipped (SKIP_DEEP_RESEARCH=1) ===")
 
+    # Stage 5c: RichReading — selected CORE + hot papers, with selected figures only
+    skip_rich_reading = os.environ.get("SKIP_RICH_READING", "").strip().lower() in ("1", "true", "yes")
+    rich_reading_results = {}
+    if config.get("rich_reading", {}).get("enabled", False) and not skip_rich_reading:
+        logger.info("=== Stage 5c: RichReading (core + hot papers) ===")
+        rich_reading_results = await generate_rich_readings(
+            date_str=date_str,
+            core_papers=core_papers,
+            peripheral_papers=peripheral_papers,
+            analyses=analyses,
+            deep_research_reports=deep_research_reports,
+            pdf_paths=pdf_paths,
+            paper_texts=paper_texts,
+            config=config,
+            api_key=api_key,
+        )
+        logger.info("RichReading complete: %d notes", len(rich_reading_results))
+    elif skip_rich_reading:
+        logger.info("=== Stage 5c: RichReading skipped (SKIP_RICH_READING=1) ===")
+    else:
+        logger.info("=== Stage 5c: RichReading disabled ===")
+
     # Save index
     core_ids = {p.arxiv_id for p in core_papers}
     for paper in all_relevant:
@@ -151,13 +179,22 @@ async def run_pipeline() -> None:
         if analysis:
             entry = paper_to_index_entry(paper, analysis)
             entry["relevance_tier"] = "core" if paper.arxiv_id in core_ids else "peripheral"
+            rich = rich_reading_results.get(paper.arxiv_id)
+            if rich:
+                entry["rich_reading_path"] = rich.data_path
+                entry["selected_figures"] = rich.selected_figure_entries()
+                entry["rich_reading_generated_at"] = rich.generated_at
             index[paper.arxiv_id] = entry
     save_index(index, index_path)
 
     # Stage 6: Report generation
     logger.info("=== Stage 6: Report generation ===")
+    rich_reading_links = {
+        arxiv_id: result.report_link for arxiv_id, result in rich_reading_results.items()
+    }
     report_md = generate_daily_report(
-        date_str, core_papers, peripheral_papers, analyses, deep_research_reports, config
+        date_str, core_papers, peripheral_papers, analyses, deep_research_reports, config,
+        rich_reading_links=rich_reading_links,
     )
     save_report(report_md, date_str)
 

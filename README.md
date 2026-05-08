@@ -4,7 +4,7 @@
 
 一个全自动的 arXiv 论文日报系统。每个工作日自动抓取 Embodied AI、World Models、Autonomous Driving 三个方向的新论文，通过 LLM 进行相关性过滤、深度分析和学术解读，生成结构化的 Markdown 日报并发送邮件摘要。
 
-**核心流程**：arXiv 抓取 → 去重 → LLM 相关性过滤 → LLM 深度分析 → LLM 学术解读 → 生成报告 → 邮件推送
+**核心流程**：arXiv 抓取 → 去重 → LLM 相关性过滤 → LLM 深度分析 → LLM 学术解读 → 图文精读 → 生成报告 → 邮件推送
 
 ---
 
@@ -282,6 +282,9 @@ scoring:
 ```bash
 # 确保已设置 OPENROUTER_API_KEY 环境变量
 python -m src.main
+
+# 跳过图文精读阶段（更快、更便宜）
+SKIP_RICH_READING=1 python -m src.main
 ```
 
 运行后会依次执行：
@@ -290,8 +293,9 @@ python -m src.main
 3. 调用 Gemini Flash 进行相关性过滤
 4. 调用 Gemini Pro 进行深度分析
 5. 调用 Gemini Pro 生成学术解读（DeepResearch）
-6. 生成 Markdown 日报到 `data/reports/YYYY-MM-DD.md`
-7. 发送邮件（如果配置了 QQ 邮箱变量）
+6. 为 core + hot 论文生成独立图文精读笔记（只保留精选图）
+7. 生成 Markdown 日报到 `data/reports/YYYY-MM-DD.md`
+8. 发送邮件（如果配置了 QQ 邮箱变量）
 
 > 本地运行时会自动跳过 Git 推送步骤，不会影响远程仓库。
 
@@ -309,8 +313,13 @@ pytest tests/ -v
 ```
 data/
 ├── papers_index.json       ← 论文索引（持续累积）
-└── reports/
-    └── 2026-03-23.md       ← 当天的日报
+├── reports/
+│   └── 2026-03-23.md       ← 当天的日报
+└── rich_readings/
+    └── 2026-03-23/
+        └── 2601.00001/
+            ├── README.md   ← 图文精读笔记
+            └── figures/    ← 精选图和 manifest
 ```
 
 ---
@@ -368,13 +377,18 @@ on:
 | 一行摘要 | 中文，30 字以内的核心贡献总结 |
 | 详细分析 | 中文，3-5 段的结构化分析（问题→方法→结果→意义）|
 | DeepResearch 解读 | 三模块学术解读（核心速写 + 架构解释 + 学术问答）|
-| 链接 | arXiv 原文 / PDF / 中文翻译(hjfy.top) / 代码仓库 |
+| 图文精读 | 独立精读笔记链接，包含公式解释、精选图表和实验消融分析 |
+| 链接 | arXiv 原文 / PDF / 中文翻译(hjfy.top) / 图文精读 / 代码仓库 |
 
-### 8.2 论文索引 (`data/papers_index.json`)
+### 8.2 图文精读 (`data/rich_readings/YYYY-MM-DD/<arxiv_id>/README.md`)
+
+默认只对 `core` 论文和达到 Hot 阈值的 peripheral 论文生成图文精读。流程会先从 arXiv TeX 源码/PDF 中抽取候选图，再由视觉模型筛选高/中优先级图表，最终只提交精选图和 `manifest.json`，避免数据仓库被全量 PDF 或全量图片撑大。
+
+### 8.3 论文索引 (`data/papers_index.json`)
 
 持续累积的 JSON 文件，记录所有处理过的论文及其分析结果。用于去重和后续的趋势分析。
 
-### 8.3 邮件摘要
+### 8.4 邮件摘要
 
 如果配置了 QQ 邮箱，每天会收到一封 HTML 格式的邮件，包含前 3 篇高亮论文的标题、摘要和链接。
 
@@ -388,8 +402,9 @@ on:
 |---|---|---|
 | 相关性过滤 | Gemini 2.5 Flash | ~$0.003 |
 | 深度分析 (10 篇) | Gemini 3.1 Pro Preview | ~$0.24 |
-| **每日总计** | | **~$0.25** |
-| **每月估算** (22 个工作日) | | **~$5.50** |
+| 图文精读 (core + hot) | 视觉模型/深度分析模型 | 取决于每日精选论文和图片数量 |
+| **每日总计** | | **随图文精读数量浮动** |
+| **每月估算** (22 个工作日) | | **建议按实际 OpenRouter 用量监控** |
 
 > 建议在 OpenRouter 后台设置月度预算上限，防止异常导致超支。
 
@@ -444,6 +459,7 @@ arxiv-daily-agent/
 │   ├── relevance_filter.py    # LLM 相关性过滤（Gemini Flash）
 │   ├── deep_analysis.py       # LLM 结构化分析（Gemini Pro）
 │   ├── deep_research.py       # LLM 学术解读（三模块 DeepResearch）
+│   ├── rich_reading.py        # 图文精读（抽图、视觉筛图、独立笔记）
 │   ├── report_generator.py    # Markdown 日报生成
 │   ├── email_sender.py        # QQ 邮箱 SMTP 发送
 │   ├── git_ops.py             # 子模块 Git 操作
@@ -453,7 +469,9 @@ arxiv-daily-agent/
 ├── prompts/
 │   ├── relevance_filter.txt   # 相关性过滤提示词
 │   ├── deep_analysis.txt      # 结构化分析提示词
-│   └── deep_research.txt      # 学术解读提示词（支持模式一/模式二）
+│   ├── deep_research.txt      # 学术解读提示词（支持模式一/模式二）
+│   ├── figure_selection.txt   # 视觉筛图提示词
+│   └── rich_reading.txt       # 图文精读提示词
 ├── templates/
 │   ├── daily_report.md.j2     # 日报 Markdown 模板
 │   └── email_digest.html.j2   # 邮件 HTML 模板
@@ -462,7 +480,8 @@ arxiv-daily-agent/
 │   └── affiliations.json      # 机构等级白名单
 ├── data/                      # Git 子模块（数据仓库）
 │   ├── papers_index.json      # 论文索引
-│   └── reports/               # 日报存放目录
+│   ├── reports/               # 日报存放目录
+│   └── rich_readings/         # 图文精读笔记与精选图
 ├── tests/                     # 单元测试
 └── requirements.txt           # Python 依赖
 ```
